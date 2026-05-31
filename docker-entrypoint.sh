@@ -5,9 +5,16 @@ DB_PATH="${DB_PATH:-/data/moesekai.db}"
 DATA_DIR="${DATA_DIR:-/data}"
 SEED_DIR="/app/seed-translations"
 
+# Service ports (internal)
+WEB_PORT="${WEB_PORT:-3000}"
+BACKEND_PORT="${BACKEND_PORT:-9090}"
+
 echo "=== MOESEKAI v2 STARTUP ==="
-echo "DB_PATH:  $DB_PATH"
-echo "DATA_DIR: $DATA_DIR"
+echo "DB_PATH:      $DB_PATH"
+echo "DATA_DIR:     $DATA_DIR"
+echo "WEB_PORT:     $WEB_PORT (Next.js, internal)"
+echo "BACKEND_PORT: $BACKEND_PORT (Go API, internal)"
+echo "NGINX:        :80 (public entry point)"
 
 mkdir -p "$DATA_DIR"
 
@@ -22,9 +29,13 @@ else
 fi
 
 # Start the Next.js console in the background.
-echo "Starting console (Next.js) on :${WEB_PORT:-3000}..."
-( cd /app/web && PORT="${WEB_PORT:-3000}" BACKEND_ORIGIN="${BACKEND_ORIGIN:-http://localhost:9090}" npx next start -p "${WEB_PORT:-3000}" ) &
+echo "Starting console (Next.js) on :${WEB_PORT}..."
+( cd /app/web && PORT="${WEB_PORT}" BACKEND_ORIGIN="http://localhost:${BACKEND_PORT}" npx next start -p "${WEB_PORT}" ) &
 
-# Start the Go backend in the foreground (PID 1 semantics for the container).
-echo "Starting backend (Go) on :${PORT:-9090}..."
-exec ./moesekai-server
+# Start the Go backend in the background.
+echo "Starting backend (Go) on :${BACKEND_PORT}..."
+( PORT="${BACKEND_PORT}" ./moesekai-server ) &
+
+# Start nginx as the foreground process (reverse proxy on port 80).
+echo "Starting nginx reverse proxy on :80..."
+exec nginx -g 'daemon off;'

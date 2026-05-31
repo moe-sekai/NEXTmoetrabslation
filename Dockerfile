@@ -29,7 +29,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /moesekai-migrate ./cm
 
 # ---- Stage 3: runtime ----
 FROM node:20-alpine AS runtime
-RUN apk add --no-cache ca-certificates tzdata git && \
+RUN apk add --no-cache ca-certificates tzdata git nginx && \
     git config --system --add safe.directory '*'
 WORKDIR /app
 
@@ -44,6 +44,9 @@ COPY --from=web-builder /web/node_modules ./web/node_modules
 COPY --from=web-builder /web/package.json ./web/package.json
 COPY --from=web-builder /web/next.config.ts ./web/next.config.ts
 
+# Nginx reverse proxy config (single entry point on port 80).
+COPY nginx.conf /etc/nginx/http.d/default.conf
+
 # Optional seed translations (used on first run when the DB is empty). This repo
 # ships no translations/ dir, so the entrypoint detects the absent seed and
 # starts with an empty DB; uncomment the COPY below if you add a seed tree.
@@ -51,14 +54,14 @@ COPY --from=web-builder /web/next.config.ts ./web/next.config.ts
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh
 
-ENV PORT=9090 \
-    DB_PATH=/data/moesekai.db \
+ENV DB_PATH=/data/moesekai.db \
     DATA_DIR=/data \
     WEB_PORT=3000 \
+    BACKEND_PORT=9090 \
     BACKEND_ORIGIN=http://localhost:9090
 
 VOLUME ["/data"]
-EXPOSE 9090 3000
+EXPOSE 80
 
 CMD ["./docker-entrypoint.sh"]
 
