@@ -18,7 +18,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 # ---- Stage 2: build the Go backend ----
-FROM golang:1.23-alpine AS go-builder
+FROM golang:1.25-alpine AS go-builder
 WORKDIR /src
 COPY server/go.mod server/go.sum* ./
 RUN go mod download 2>/dev/null || true
