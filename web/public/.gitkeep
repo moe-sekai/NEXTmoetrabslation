@@ -1,0 +1,2 @@
+# Next.js public assets directory.
+# Place static files here (favicon, images). Kept in git so Docker COPY succeeds.

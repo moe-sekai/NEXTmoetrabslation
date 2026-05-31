@@ -1,0 +1,21 @@
+# Go build artifacts
+*.exe
+/server
+/cmd/**/server
+
+# Runtime data (SQLite, generated files, embedded git workspace)
+/data/
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# Next.js / web
+web/node_modules/
+web/.next/
+web/out/
+node_modules/
+
+# Env
+.env
+.env.local
