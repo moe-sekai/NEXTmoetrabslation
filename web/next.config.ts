@@ -1,23 +1,35 @@
 import type { NextConfig } from "next";
 
-// The console is deployed as a standalone Next.js app (separate from the public
-// site). API calls go to the Go backend; the base URL is configured via
-// NEXT_PUBLIC_API_BASE (defaults to same-origin for dev proxying).
+// The console is a fully client-side SPA. In production (the Docker build) it is
+// statically exported (`output: "export"` -> `out/`) and served directly by
+// nginx, which also reverse-proxies /api, /sse, /files to the Go backend. No
+// Node.js runs in production.
+//
+// In dev (`next dev`), we instead proxy those same paths to the backend via
+// rewrites so the browser sees a single same-origin app. The two modes are kept
+// separate because `output: export` is incompatible with rewrites.
+const isDev = process.env.NODE_ENV === "development";
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  // Don't let lint warnings (e.g. style nits) fail production/Docker builds;
-  // TypeScript type errors still block the build.
+  // Don't let lint warnings fail the Docker build; TS type errors still block it.
   eslint: { ignoreDuringBuilds: true },
-  // Proxy /api and /sse to the backend during local dev so the browser sees a
-  // same-origin app (no CORS). In production these are set via env / ingress.
-  async rewrites() {
-    const backend = process.env.BACKEND_ORIGIN || "http://localhost:9090";
-    return [
-      { source: "/api/:path*", destination: `${backend}/api/:path*` },
-      { source: "/sse", destination: `${backend}/sse` },
-      { source: "/files/:path*", destination: `${backend}/files/:path*` },
-    ];
-  },
+  ...(isDev
+    ? {
+        async rewrites() {
+          const backend = process.env.BACKEND_ORIGIN || "http://localhost:9090";
+          return [
+            { source: "/api/:path*", destination: `${backend}/api/:path*` },
+            { source: "/sse", destination: `${backend}/sse` },
+            { source: "/files/:path*", destination: `${backend}/files/:path*` },
+          ];
+        },
+      }
+    : {
+        output: "export",
+        // The Next.js image optimizer needs a server; static export can't use it.
+        images: { unoptimized: true },
+      }),
 };
 
 export default nextConfig;

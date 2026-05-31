@@ -29,9 +29,10 @@ func main() {
 	log.SetFlags(log.LstdFlags | log.LUTC)
 	log.SetPrefix("")
 
-	port := envOr("PORT", "9090")
+	port := envOr("PORT", "8080")
 	dbPath := envOr("DB_PATH", "./data/moesekai.db")
 	dataDir := envOr("DATA_DIR", "./data")
+	webDir := envOr("WEB_DIR", "./web")
 	masterKey := os.Getenv("MOESEKAI_MASTER_KEY")
 	jwtSecret := envOr("JWT_SECRET", "")
 	allowOrigin := envOr("CONSOLE_ORIGIN", "*")
@@ -105,6 +106,16 @@ func main() {
 		fmt.Fprint(w, `{"status":"ok"}`)
 	})
 
+	// Catch-all: serve the statically-exported console SPA. More specific routes
+	// above (/api/, /files/, /healthz, /sse) take precedence in ServeMux, so "/"
+	// only receives page and asset requests. This makes Go the single process —
+	// no nginx, no Node.js.
+	serveWeb := false
+	if st, err := os.Stat(webDir); err == nil && st.IsDir() {
+		mux.HandleFunc("/", staticHandler(webDir))
+		serveWeb = true
+	}
+
 	handler := corsMiddleware(mux, allowOrigin)
 	handler = loggingMiddleware(handler)
 
@@ -113,6 +124,11 @@ func main() {
 	log.Printf("  data dir:  %s", dataDir)
 	log.Printf("  files:     /files/* (public, cacheable)")
 	log.Printf("  api:       /api/*   (JWT, no-store)")
+	if serveWeb {
+		log.Printf("  console:   /       (static SPA from %s)", webDir)
+	} else {
+		log.Printf("  console:   not served (%s not found) — API-only mode", webDir)
+	}
 	if !cfg.HasMasterKey() {
 		log.Println("  WARNING: MOESEKAI_MASTER_KEY not set — secrets cannot be stored")
 	}
