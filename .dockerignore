@@ -1,0 +1,23 @@
+# Keep host-built artifacts out of the build context. The web-builder stage
+# produces a Linux node_modules / .next inside the image; copying the host's
+# (Windows) versions in would corrupt the runtime.
+web/node_modules/
+web/.next/
+web/out/
+node_modules/
+server/server
+server/cmd/**/server
+**/*.exe
+
+# Runtime data must never be baked into the image.
+data/
+**/data/
+*.db
+*.db-wal
+*.db-shm
+
+# VCS / env / docs
+.git/
+.env
+.env.local
+*.md
