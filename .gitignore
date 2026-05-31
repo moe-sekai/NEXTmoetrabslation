@@ -1,6 +1,5 @@
-# Go build artifacts
-*.exe
-/server
+# Go build artifacts (match binary file only, not the server/ directory)
+/server(!/)
 /cmd/**/server
 
 # Runtime data (SQLite, generated files, embedded git workspace)
